@@ -1,0 +1,88 @@
+services:
+  backend:
+    container_name: cdms
+    build:
+      context: ./CDMS
+      dockerfile: DockerFile
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./CDMS/.env
+    volumes:
+      - ./CDMS:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - app-network
+  celery_worker:
+    build:
+      context: ./CDMS
+      dockerfile: DockerFile
+    container_name: celery_worker
+    command: celery -A app.tasks.celery_app worker --beat --loglevel=info
+    volumes:
+      - ./CDMS:/app
+    env_file:
+      - ./CDMS/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      backend:
+        condition: service_started
+    networks:
+      - app-network
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: postgres
+    env_file:
+      - ./Postgres/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  vietful:
+    build:
+      context: ./Vietful_Mock
+      dockerfile: ./DockerFile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./Vietful_Mock/.env
+    volumes:
+      - ./Vietful_Mock:/app
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sh-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redis_data:

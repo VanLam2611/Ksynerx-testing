@@ -1,0 +1,10 @@
+dotenv
+# Faker - for generating fake data
+faker>=40.40.0
+# Uvicorn - for ASGI server
+uvicorn>=0.34.0
+# FastAPI - for building API
+fastapi>=0.115.0
+
+# Pydantic - for data validation and serialization
+pydantic>=2.0.0
